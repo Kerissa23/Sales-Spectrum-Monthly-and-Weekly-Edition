@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Prediction</title>
+    <style>
+        /* Set a blue theme */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f8ff;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            color: #004a99; /* Dark blue for the title */
+        }
+
+        label {
+            font-size: 1.1rem;
+            color: #004a99;
+        }
+
+        select, input, button {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #004a99;
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: #004a99;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #003366;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 300px;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #004a99;
+        }
+
+        th {
+            background-color: #004a99;
+            color: white;
+        }
+
+        td {
+            background-color: #e6f0ff;
+        }
+
+        #chart {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sales Prediction</h1>
+
+    <label for="prediction_type">Prediction Type:</label>
+    <select id="prediction_type">
+        <option value="monthly">Monthly</option>
+        <option value="weekly">Weekly</option>
+    </select><br><br>
+
+    <label for="periods">Number of Periods to Predict:</label>
+    <input type="number" id="periods" name="periods" min="1" required><br><br>
+
+    <button onclick="makePrediction()">Predict Sales</button>
+
+    <h2>Predicted Sales</h2>
+    <div id="results"></div>
+    <div id="chart"></div>
+
+    <script>
+        async function makePrediction() {
+            const predictionType = document.getElementById('prediction_type').value;
+            const periods = document.getElementById('periods').value;
+
+            const response = await fetch('/predict_sales', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    prediction_type: predictionType,
+                    periods: parseInt(periods)
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                document.getElementById('results').innerText = `Error: ${data.error}`;
+                document.getElementById('chart').innerHTML = '';
+            } else {
+                // Display the forecast results
+                let resultHTML = '<table><tr><th>Period</th><th>Prediction</th><th>Confidence Interval</th></tr>';
+                data.forecast_index.forEach((date, index) => {
+                    resultHTML += ` 
+                        <tr>
+                            <td>${date}</td>
+                            <td>${data.forecast_values[index]}</td>
+                            <td>[${data.confidence_intervals[index][0]}, ${data.confidence_intervals[index][1]}]</td>
+                        </tr>`;
+                });
+                resultHTML += '</table>';
+                document.getElementById('results').innerHTML = resultHTML;
+
+                // Display the plot image
+                const img = document.createElement('img');
+                img.src = `data:image/png;base64,${data.forecast_plot}`;
+                img.style.width = '500px';
+                img.style.height = 'auto';
+                document.getElementById('chart').innerHTML = '';
+                document.getElementById('chart').appendChild(img);
+            }
+        }
+    </script>
+</body>
+</html>
